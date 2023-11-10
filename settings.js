@@ -39,7 +39,7 @@ document.getElementById('updateWordsButton').addEventListener('click', () => {
   var url = 'https://thewordsponge.com/sponge/words/' + selectedLanguage;
   fetch(url, { credentials: 'include' })
       .then(response => {
-        console.log(response.body);
+        //console.log(response.body);
         return response.json();
       })
       .then(data => {

@@ -1,6 +1,15 @@
 function fetchAndUpdateWords() {
   const url = new URL(window.location.href);
   chrome.storage.sync.get([url.hostname], (result) => {
+  
+  // If 'Custom' language selected in settings, we don't need to fetch words
+  chrome.storage.local.get('language', function(data) {
+    if (data.language) {
+      console.log('Blocking fetchAndUpdateWords() due to Custom language selected');
+	  return;
+    }
+  });
+	  
     if (!result[url.hostname]) {
       fetch('https://thewordsponge.com/sponge/words', { credentials: 'include' })
           .then(response => response.json())
