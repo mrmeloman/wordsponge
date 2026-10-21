@@ -8,16 +8,28 @@ function formatWords(words) {
   return Object.entries(words).map(([word, translation]) => `${word}: ${translation}`).join('\n');
 }
 
-// Parses "word<sep>translation" lines; the separator is whichever of tab, colon, comma or semicolon appears first
+// Parses "word<sep>translation" lines. A tab wins, then ": " as written by the text box, then the first colon, comma or semicolon
 function parseLines(text) {
   const words = {};
+  const unquote = (value) => value.trim().replace(/^"(.*)"$/s, '$1').replace(/""/g, '"').trim();
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-    const match = line.match(/^(.+?)\s*[\t:,;]\s*(.+)$/);
-    if (match) words[match[1].trim()] = match[2].trim();
+    if (!line || line.startsWith('#') || /^"?word"?\s*[\t:,;]\s*"?translation"?$/i.test(line)) continue;
+    const separator = line.includes('\t') ? '\t' : line.includes(': ') ? ': ' : line.match(/[:,;]/)?.[0];
+    if (!separator) continue;
+    const index = line.indexOf(separator);
+    const word = unquote(line.slice(0, index));
+    const translation = unquote(line.slice(index + separator.length));
+    if (word && translation) words[word] = translation;
   }
   return words;
+}
+
+// Decodes text files that Excel and friends save as UTF-16 with a byte order mark
+async function readTextFile(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const encoding = bytes[0] === 0xff && bytes[1] === 0xfe ? 'utf-16le' : bytes[0] === 0xfe && bytes[1] === 0xff ? 'utf-16be' : 'utf-8';
+  return new TextDecoder(encoding).decode(bytes);
 }
 
 function parseJson(text) {
@@ -58,7 +70,7 @@ document.getElementById('wordFile').addEventListener('change', async (event) => 
   const file = event.target.files[0];
   if (!file) return;
   try {
-    const text = await file.text();
+    const text = await readTextFile(file);
     const uploaded = file.name.toLowerCase().endsWith('.json') ? parseJson(text) : parseLines(text);
     const added = Object.keys(uploaded).length;
     if (!added) throw new Error('No word pairs found in the file.');
@@ -81,6 +93,7 @@ document.getElementById('updateWordsButton').addEventListener('click', async () 
   }
 
   updateResults.textContent = 'Updating...';
+  await api.storage.local.set({ language: selectedLanguage });
   const response = await api.runtime.sendMessage({ action: 'refreshWords', language: selectedLanguage });
   updateResults.textContent = response?.error
     ? `Could not update the word list: ${response.error}`

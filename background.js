@@ -22,11 +22,12 @@ async function ensureAlarm() {
 
 api.runtime.onInstalled.addListener(async ({ reason }) => {
   ensureAlarm();
+  const { language, words, customWords } = await api.storage.local.get(['language', 'words', 'customWords']);
   // Earlier versions kept a hand-edited list in "words" under the Custom language; keep it as the user's list
-  if (reason === 'update') {
-    const { language, words, customWords } = await api.storage.local.get(['language', 'words', 'customWords']);
-    if (language === 'Custom' && words && !customWords) await api.storage.local.set({ customWords: words });
+  if (reason === 'update' && language === 'Custom' && words && !customWords) {
+    await api.storage.local.set({ customWords: words });
   }
+  if (reason === 'install' || !words) refreshWords(language).catch(console.error);
 });
 api.runtime.onStartup.addListener(ensureAlarm);
 

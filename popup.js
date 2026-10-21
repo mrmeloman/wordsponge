@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Content scripts pick up the change through storage.onChanged
   toggle.addEventListener('change', () => {
-    api.storage.sync.set({ [hostname]: !toggle.checked });
+    if (toggle.checked) api.storage.sync.remove(hostname);
+    else api.storage.sync.set({ [hostname]: true });
   });
 });
