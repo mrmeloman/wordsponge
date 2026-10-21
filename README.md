@@ -8,6 +8,7 @@ Word Sponge is a Chrome and Firefox extension that helps you learn a new languag
 - Choose from a variety of languages to learn
 - Replace words on any web page with their translations
 - Click on translated words to switch back to the original word
+- Control how often words are replaced: Light, Balanced, Intense or Everything, or your own limits
 - Add your own words by hand or upload a word list file (.txt, .csv, .tsv or .json)
 - Works fully offline with your own words by default; downloading word lists from thewordsponge.com is an opt-in that refreshes once a day
 - Only replaces words in regular text, not in attributes such as classes or data tags
@@ -56,6 +57,19 @@ Open the extension's settings (the "Settings" link in the popup, or the add-on's
 - Type words directly into the text box, one per line, as `word: translation`, and click "Save".
 - Or upload a file. Text files (.txt, .csv, .tsv) take one pair per line separated by a colon, tab, comma or semicolon; lines starting with `#` are ignored. JSON files take either an object such as `{"cat": "gato"}` or an array of `["cat", "gato"]` pairs. Uploaded words are added to the list in the text box.
 - To use the ready-made lists from thewordsponge.com instead, tick "Download word lists from thewordsponge.com" in settings. The browser then asks for permission to access that site; untick it to go back to local-only mode.
+
+## How Often Words Are Replaced
+
+Pick an intensity from the extension popup, or fine-tune it in settings. Changes apply to open pages right away.
+
+| Intensity | Share of matching words | Same word per page | Words per page |
+|---|---|---|---|
+| Light | about 30% | once | up to 10 |
+| Balanced | about 50% | up to 2 times | up to 30 |
+| Intense | about 80% | up to 5 times | up to 100 |
+| Everything (default) | all | no limit | no limit |
+
+Choose "Custom" in settings to set the three limits yourself; leave a number empty for no limit. When limits apply, the replaced words are picked at random across the whole page, so each visit practises different ones.
 
 ## Contributing
 

@@ -123,6 +123,55 @@ updateWordsButton.addEventListener('click', async () => {
     : `Word list updated successfully (${response.count} words). Language selected: ${selectedLanguage}`;
 });
 
+// Frequency: a preset sets all limits at once; editing a limit switches to Custom unless it matches a preset
+const presetList = document.getElementById('presets');
+const density = document.getElementById('density');
+const densityValue = document.getElementById('densityValue');
+const perWord = document.getElementById('perWord');
+const perPage = document.getElementById('perPage');
+
+for (const [name, preset] of [...Object.entries(FREQUENCY_PRESETS), ['custom', { label: 'Custom' }]]) {
+  const label = document.createElement('label');
+  label.className = 'preset';
+  label.innerHTML = '<input type="radio" name="preset"> <strong></strong><span class="hint"></span>';
+  label.querySelector('input').value = name;
+  label.querySelector('strong').textContent = preset.label;
+  label.querySelector('.hint').textContent = name === 'custom' ? 'Set your own limits below.' : describeFrequency(preset);
+  presetList.appendChild(label);
+}
+
+function renderFrequency(frequency) {
+  const current = normalizeFrequency(frequency);
+  density.value = current.density;
+  densityValue.textContent = `${current.density}%`;
+  perWord.value = current.perWord || '';
+  perPage.value = current.perPage || '';
+  presetList.querySelector(`input[value="${frequencyPreset(current)}"]`).checked = true;
+}
+
+function readLimit(input) {
+  return Math.max(0, Math.floor(Number(input.value) || 0));
+}
+
+function saveFrequency(frequency) {
+  const { density, perWord, perPage } = normalizeFrequency(frequency);
+  renderFrequency(frequency);
+  api.storage.local.set({ frequency: { density, perWord, perPage } });
+}
+
+presetList.addEventListener('change', (event) => {
+  if (event.target.value === 'custom') density.focus();
+  else saveFrequency(FREQUENCY_PRESETS[event.target.value]);
+});
+density.addEventListener('input', () => { densityValue.textContent = `${density.value}%`; });
+for (const input of [density, perWord, perPage]) {
+  input.addEventListener('change', () => saveFrequency({ density: Number(density.value), perWord: readLimit(perWord), perPage: readLimit(perPage) }));
+}
+api.storage.local.get('frequency').then(({ frequency }) => renderFrequency(frequency));
+api.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.frequency) renderFrequency(changes.frequency.newValue);
+});
+
 languageSelect.addEventListener('change', function () {
   api.storage.local.set({ language: this.value });
 });

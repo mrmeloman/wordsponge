@@ -38,7 +38,7 @@
     {
       "matches": ["<all_urls>"],
       "exclude_matches": ["*://*.google.com/*","*://*.twitter.com/*"],
-      "js": ["content.js"],
+      "js": ["frequency.js", "content.js"],
       "css": ["style.css"]
     }
   ],
