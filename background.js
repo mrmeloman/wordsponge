@@ -1,11 +1,14 @@
 const api = globalThis.browser ?? globalThis.chrome;
 
 const WORDS_URL = 'https://thewordsponge.com/sponge/words';
+const WORDS_ORIGIN = { origins: ['https://thewordsponge.com/*'] };
 
-// Downloads the word list for a language ("Custom" means the user manages their own list)
+// Downloads the word list for a language; does nothing unless the user opted in to downloads
 async function refreshWords(language) {
-  if (language === undefined) ({ language } = await api.storage.local.get('language'));
-  if (language === 'Custom') return { skipped: true };
+  const stored = await api.storage.local.get(['downloadWords', 'language']);
+  if (!stored.downloadWords) return { skipped: true };
+  if (!(await api.permissions.contains(WORDS_ORIGIN))) throw new Error('Permission to access thewordsponge.com was not granted');
+  if (language === undefined) ({ language } = stored);
   const response = await fetch(language ? `${WORDS_URL}/${language}` : WORDS_URL, { credentials: 'include' });
   if (!response.ok) throw new Error(`Server responded with ${response.status}`);
   const words = await response.json();
@@ -22,12 +25,16 @@ async function ensureAlarm() {
 
 api.runtime.onInstalled.addListener(async ({ reason }) => {
   ensureAlarm();
-  const { language, words, customWords } = await api.storage.local.get(['language', 'words', 'customWords']);
-  // Earlier versions kept a hand-edited list in "words" under the Custom language; keep it as the user's list
-  if (reason === 'update' && language === 'Custom' && words && !customWords) {
-    await api.storage.local.set({ customWords: words });
+  if (reason !== 'update') return;
+  // Earlier versions downloaded by default and kept a hand-edited list in "words" under the "Custom" language
+  const { language, words, customWords, downloadWords } = await api.storage.local.get(['language', 'words', 'customWords', 'downloadWords']);
+  if (downloadWords !== undefined) return;
+  if (language === 'Custom') {
+    await api.storage.local.set({ downloadWords: false, customWords: customWords || words || {} });
+    await api.storage.local.remove('language');
+  } else {
+    await api.storage.local.set({ downloadWords: Boolean(words) });
   }
-  if (reason === 'install' || !words) refreshWords(language).catch(console.error);
 });
 api.runtime.onStartup.addListener(ensureAlarm);
 

@@ -126,21 +126,21 @@ function startTranslations() {
 
 async function refresh() {
   const { hostname } = window.location;
-  const [disabled, { words, customWords }] = await Promise.all([
+  const [disabled, { words, customWords, downloadWords }] = await Promise.all([
     api.storage.sync.get(hostname),
-    api.storage.local.get(['words', 'customWords'])
+    api.storage.local.get(['words', 'customWords', 'downloadWords'])
   ]);
   if (disabled[hostname]) {
     stopTranslations();
     return;
   }
-  matcher = buildMatcher({ ...(words || {}), ...(customWords || {}) });
+  matcher = buildMatcher({ ...(downloadWords ? words : null), ...customWords });
   startTranslations();
 }
 
 document.addEventListener('click', toggleTranslation);
 api.storage.onChanged.addListener((changes, area) => {
-  const relevant = area === 'sync' ? window.location.hostname in changes : 'words' in changes || 'customWords' in changes;
+  const relevant = area === 'sync' ? window.location.hostname in changes : ['words', 'customWords', 'downloadWords'].some((key) => key in changes);
   if (relevant) refresh();
 });
 refresh();

@@ -15,7 +15,7 @@
 </head>
 <body>
 <h1>Add Your Own Words</h1>
-<p class="hint">One word per line as <code>word: translation</code>. Your words are kept alongside the downloaded list and take priority over it.</p>
+<p class="hint">One word per line as <code>word: translation</code>. Your words are kept alongside any downloaded list and take priority over it.</p>
 <form id="wordListForm">
   <label for="wordList">Word List</label>
   <div>
@@ -33,6 +33,10 @@
 <div class="results"></div>
 <div class="p-4">
 <h1>Word List Updates From wordsponge.com</h1>
+  <p class="hint">Off by default: the extension then works fully offline with only your own words. Turning it on asks for permission to access thewordsponge.com and refreshes the list once a day.</p>
+  <div class="p-1">
+    <label><input type="checkbox" id="downloadWords"> Download word lists from thewordsponge.com</label>
+  </div>
   <div class="p-1">
 	<span style=font-size:1.2em>Language: </span>
     <select id="languageSelect" name="languageSelect">
@@ -43,7 +47,6 @@
       <option value="JP">JP</option>
       <option value="GB">GB</option>
       <option value="AU">AU</option>
-	  <option value="Custom">Custom</option>
     </select>
   </div>
   <div class="p-1">

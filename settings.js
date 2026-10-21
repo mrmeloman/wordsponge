@@ -3,6 +3,16 @@ const api = globalThis.browser ?? globalThis.chrome;
 const results = document.querySelector('.results');
 const updateResults = document.querySelector('.update_results');
 const wordList = document.getElementById('wordList');
+const downloadWords = document.getElementById('downloadWords');
+const languageSelect = document.getElementById('languageSelect');
+const updateWordsButton = document.getElementById('updateWordsButton');
+const WORDS_ORIGIN = { origins: ['https://thewordsponge.com/*'] };
+
+function setDownloadsEnabled(enabled) {
+  downloadWords.checked = enabled;
+  languageSelect.disabled = !enabled;
+  updateWordsButton.disabled = !enabled;
+}
 
 function formatWords(words) {
   return Object.entries(words).map(([word, translation]) => `${word}: ${translation}`).join('\n');
@@ -51,9 +61,10 @@ async function saveCustomWords(customWords) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const { customWords, language } = await api.storage.local.get(['customWords', 'language']);
-  if (customWords) wordList.value = formatWords(customWords);
-  if (language) document.getElementById('languageSelect').value = language;
+  const stored = await api.storage.local.get(['customWords', 'language', 'downloadWords']);
+  if (stored.customWords) wordList.value = formatWords(stored.customWords);
+  if (stored.language) languageSelect.value = stored.language;
+  setDownloadsEnabled(Boolean(stored.downloadWords));
 });
 
 document.getElementById('saveButton').addEventListener('click', async () => {
@@ -83,23 +94,35 @@ document.getElementById('wordFile').addEventListener('change', async (event) => 
   event.target.value = '';
 });
 
-document.getElementById('updateWordsButton').addEventListener('click', async () => {
-  const selectedLanguage = document.getElementById('languageSelect').value;
+// Downloads are opt-in: enabling them asks the browser for permission to reach thewordsponge.com
+downloadWords.addEventListener('change', async () => {
+  const granted = downloadWords.checked && await api.permissions.request(WORDS_ORIGIN);
+  setDownloadsEnabled(granted);
+  await api.storage.local.set({ downloadWords: granted });
+  if (downloadWords.checked && !granted) {
+    updateResults.textContent = 'Permission to access thewordsponge.com was not granted, so word lists stay local.';
+  } else if (!granted) {
+    updateResults.textContent = 'Downloads are off. Only your own words are used.';
+    api.permissions.remove(WORDS_ORIGIN);
+  } else {
+    updateResults.textContent = '';
+  }
+});
 
-  // If 'Custom' is selected - do not fetch from thewordsponge.com
-  if (selectedLanguage === 'Custom') {
-    updateResults.textContent = 'Nothing changed as Custom language is selected. Select other language to download word list from wordsponge.com';
+updateWordsButton.addEventListener('click', async () => {
+  const selectedLanguage = languageSelect.value;
+  await api.storage.local.set({ language: selectedLanguage });
+  if (!(await api.permissions.contains(WORDS_ORIGIN)) && !(await api.permissions.request(WORDS_ORIGIN))) {
+    updateResults.textContent = 'Permission to access thewordsponge.com was not granted.';
     return;
   }
-
   updateResults.textContent = 'Updating...';
-  await api.storage.local.set({ language: selectedLanguage });
   const response = await api.runtime.sendMessage({ action: 'refreshWords', language: selectedLanguage });
   updateResults.textContent = response?.error
     ? `Could not update the word list: ${response.error}`
     : `Word list updated successfully (${response.count} words). Language selected: ${selectedLanguage}`;
 });
 
-document.getElementById('languageSelect').addEventListener('change', function () {
+languageSelect.addEventListener('change', function () {
   api.storage.local.set({ language: this.value });
 });

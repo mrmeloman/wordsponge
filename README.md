@@ -9,7 +9,7 @@ Word Sponge is a Chrome and Firefox extension that helps you learn a new languag
 - Replace words on any web page with their translations
 - Click on translated words to switch back to the original word
 - Add your own words by hand or upload a word list file (.txt, .csv, .tsv or .json)
-- Automatically refreshes words list once per day
+- Works fully offline with your own words by default; downloading word lists from thewordsponge.com is an opt-in that refreshes once a day
 - Only replaces words in regular text, not in attributes such as classes or data tags
 - Does not replace words inside `<a>` tags or `<input>` tags
 - Uses local storage to store the words list, avoiding unnecessary requests to the server
@@ -51,11 +51,11 @@ That's it! You're now ready to start browsing the web and learning a new languag
 
 ## Your Own Words
 
-Open the extension's settings (the "Settings" link in the popup, or the add-on's options page) to manage your own word list. Your words are kept separately from the downloaded list and take priority over it, so they survive the daily update.
+Open the extension's settings (the "Settings" link in the popup, or the add-on's options page) to manage your own word list. By default the extension is fully local: it never contacts thewordsponge.com and uses only the words you add here. Your words are kept separately from any downloaded list and take priority over it, so they survive the daily update.
 
 - Type words directly into the text box, one per line, as `word: translation`, and click "Save".
 - Or upload a file. Text files (.txt, .csv, .tsv) take one pair per line separated by a colon, tab, comma or semicolon; lines starting with `#` are ignored. JSON files take either an object such as `{"cat": "gato"}` or an array of `["cat", "gato"]` pairs. Uploaded words are added to the list in the text box.
-- Choose "Custom" as the language if you want to use only your own words and stop downloading lists from thewordsponge.com.
+- To use the ready-made lists from thewordsponge.com instead, tick "Download word lists from thewordsponge.com" in settings. The browser then asks for permission to access that site; untick it to go back to local-only mode.
 
 ## Contributing
 
@@ -69,6 +69,6 @@ own site or use a different method to update the word list.
 
 ## How to Change Language
 
-1. Install the extension
+1. Install the extension and enable downloads in its settings
 2. Go to "thewordsponge.com" and click a new language
 3. Click the "confirm" button too.
