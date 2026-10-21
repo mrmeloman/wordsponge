@@ -1,6 +1,6 @@
 # Word Sponge
 
-Word Sponge is a Chrome extension that helps you learn a new language by replacing words on web pages with their translations. Simply download the extension, choose the language you want to learn, and start browsing the web!
+Word Sponge is a Chrome and Firefox extension that helps you learn a new language by replacing words on web pages with their translations. Simply download the extension, choose the language you want to learn, and start browsing the web!
 
 ## Features
 
@@ -8,11 +8,13 @@ Word Sponge is a Chrome extension that helps you learn a new language by replaci
 - Choose from a variety of languages to learn
 - Replace words on any web page with their translations
 - Click on translated words to switch back to the original word
+- Add your own words by hand or upload a word list file (.txt, .csv, .tsv or .json)
 - Automatically refreshes words list once per day
 - Only replaces words in regular text, not in attributes such as classes or data tags
 - Does not replace words inside `<a>` tags or `<input>` tags
 - Uses local storage to store the words list, avoiding unnecessary requests to the server
 - Follows strict privacy and security guidelines and policies of the Chrome Web Store
+- Works in Chrome (Manifest V3, Chrome 121 or newer) and Firefox (140 or newer) from the same code
 
 ## Installation Now
 
@@ -23,6 +25,13 @@ Word Sponge is a Chrome extension that helps you learn a new language by replaci
 5. Click on the "Load unpacked" button in the top-left corner of the page.
 6. Navigate to the folder where you extracted the zip file, and select it.
 7. Click on the "Select Folder" button to load the extension.
+
+### Firefox
+
+1. Download the wordsponge.zip file.
+2. Open Firefox and navigate to about:debugging#/runtime/this-firefox.
+3. Click "Load Temporary Add-on..." and select the zip file (or the manifest.json from the extracted folder).
+4. A temporary add-on is removed when Firefox closes. To keep it, sign the zip through [addons.mozilla.org](https://addons.mozilla.org/developers/) and install the signed file.
 
 ## Installation
 
@@ -38,6 +47,15 @@ That's it! You're now ready to start browsing the web and learning a new languag
 - Navigate to any web page in your browser.
 - Any words on the page that match the words list for your chosen language will be replaced with their translations.
 - Click on a translated word to switch back to the original word.
+- Use the toggle in the extension popup to turn Word Sponge off for the current site.
+
+## Your Own Words
+
+Open the extension's settings (the "Settings" link in the popup, or the add-on's options page) to manage your own word list. Your words are kept separately from the downloaded list and take priority over it, so they survive the daily update.
+
+- Type words directly into the text box, one per line, as `word: translation`, and click "Save".
+- Or upload a file. Text files (.txt, .csv, .tsv) take one pair per line separated by a colon, tab, comma or semicolon; lines starting with `#` are ignored. JSON files take either an object such as `{"cat": "gato"}` or an array of `["cat", "gato"]` pairs. Uploaded words are added to the list in the text box.
+- Choose "Custom" as the language if you want to use only your own words and stop downloading lists from thewordsponge.com.
 
 ## Contributing
 

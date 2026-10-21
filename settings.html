@@ -4,21 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Word Sponge - Add Your Words</title>
-  <!--<link rel="stylesheet" href="styles.css"> <-- Link to your CSS file -->
   <style>
+    body { font-family: Arial, sans-serif; max-width: 640px; margin: 20px auto; padding: 0 16px; }
     .p-4 { padding: 40px 0; }
     .p-2 { padding: 20px 0; }
-	.p-1 { padding: 10px 0; }
+    .p-1 { padding: 10px 0; }
+    textarea { width: 100%; box-sizing: border-box; font-family: monospace; }
+    .hint { color: #666; font-size: 0.9em; }
   </style>
 </head>
 <body>
 <h1>Add Your Own Words</h1>
+<p class="hint">One word per line as <code>word: translation</code>. Your words are kept alongside the downloaded list and take priority over it.</p>
 <form id="wordListForm">
   <label for="wordList">Word List</label>
   <div>
-    <textarea id="wordList" name="wordList" rows="10" cols="50" required></textarea>
+    <textarea id="wordList" name="wordList" rows="10" cols="50" spellcheck="false"></textarea>
   </div>
-  <button type="button" id="saveButton">Save</button>
+  <div class="p-1">
+    <button type="button" id="saveButton">Save</button>
+  </div>
+  <div class="p-1">
+    <label for="wordFile">Upload a word list (.txt, .csv, .tsv or .json)</label>
+    <div><input type="file" id="wordFile" accept=".txt,.csv,.tsv,.json,text/plain,text/csv,application/json"></div>
+    <p class="hint">Text files: one pair per line, separated by a colon, tab, comma or semicolon. JSON: an object of <code>{"word": "translation"}</code> or an array of <code>["word", "translation"]</code> pairs. Uploaded words are added to the list above.</p>
+  </div>
 </form>
 <div class="results"></div>
 <div class="p-4">
@@ -41,7 +51,6 @@
 	<div class="update_results"></div>
   </div>
 </div>
-<!-- Add any additional elements as needed -->
-<script src="settings.js"></script> <!-- Link to your JS file -->
+<script src="settings.js"></script>
 </body>
 </html>
