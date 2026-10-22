@@ -19,6 +19,8 @@ Word Sponge is a Chrome and Firefox extension that helps you learn a new languag
 
 ## Installation Now
 
+The easiest way is the [latest release](https://github.com/mrmeloman/wordsponge/releases/latest), which has a package for Chrome and one for Firefox, each with install steps. To install from this repository instead:
+
 1. Download the wordsponge.zip file.
 2. Extract the contents of the zip file to a folder on your computer.
 3. Open Google Chrome and navigate to the extensions page by typing chrome://extensions into the address bar.
@@ -70,6 +72,12 @@ Pick an intensity from the extension popup, or fine-tune it in settings. Changes
 | Everything (default) | all | no limit | no limit |
 
 Choose "Custom" in settings to set the three limits yourself; leave a number empty for no limit. When limits apply, the replaced words are picked at random across the whole page, so each visit practises different ones.
+
+## Releases
+
+To publish a release, add a section for the new version to CHANGELOG.md and raise the version in manifest.json. When that reaches the main branch, a GitHub Actions workflow builds a Chrome package and a Firefox package and publishes them as a release. It can also be run by hand from the Actions tab.
+
+The Firefox package is unsigned unless the repository has the secrets `AMO_JWT_ISSUER` and `AMO_JWT_SECRET`, which are API credentials from the [addons.mozilla.org developer hub](https://addons.mozilla.org/developers/addon/api/key/). With them, the workflow has the package signed by Mozilla for self-distribution, so it installs permanently in Firefox and Firefox-based browsers.
 
 ## Contributing
 
