@@ -1,7 +1,9 @@
 name: Release
 
 # Publishes a release with a Chrome and a Firefox package when the version in manifest.json
-# changes on main and there is no release for it yet. It can also be started by hand.
+# changes on main and there is no release for it yet.
+# Run it by hand to publish the current version, or to rebuild the packages of an existing release
+# from its tag, for example to add a signed Firefox package after setting up the signing secrets.
 on:
   push:
     branches: [main]
@@ -17,26 +19,35 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
+      GH_TOKEN: ${{ github.token }}
       # Optional repository secrets: addons.mozilla.org API credentials for a signed Firefox package
       AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
       AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Read version
-        id: version
+      - name: Plan
+        id: plan
         run: |
           version=$(jq -r .version manifest.json)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+          if ! gh release view "v$version" > /dev/null 2>&1; then
+            echo "mode=create" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            echo "Rebuilding the packages of the existing release v$version from its tag."
+            git checkout -q "v$version"
+            echo "mode=update" >> "$GITHUB_OUTPUT"
+          else
             echo "Release v$version already exists, nothing to do."
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "mode=skip" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build packages
-        if: steps.version.outputs.exists != 'true'
+        if: steps.plan.outputs.mode != 'skip'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.plan.outputs.version }}
         run: |
           mkdir -p build/chrome build/firefox dist
           for target in chrome firefox; do
@@ -50,19 +61,24 @@ jobs:
           npx --yes web-ext@10 lint --source-dir build/firefox
 
       - name: Sign the Firefox package
-        if: steps.version.outputs.exists != 'true' && env.AMO_JWT_ISSUER != ''
+        if: steps.plan.outputs.mode != 'skip' && env.AMO_JWT_ISSUER != ''
         continue-on-error: true
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.plan.outputs.version }}
         run: |
+          # Mozilla signs each version only once, so reuse a signed package the release already has
+          if gh release download "v$VERSION" --pattern "wordsponge-firefox-$VERSION.xpi" --dir dist 2> /dev/null; then
+            echo "Reusing the signed package already on the release."
+            exit 0
+          fi
           npx --yes web-ext@10 sign --channel unlisted --source-dir build/firefox --artifacts-dir signed \
             --api-key "$AMO_JWT_ISSUER" --api-secret "$AMO_JWT_SECRET"
           mv signed/*.xpi "dist/wordsponge-firefox-$VERSION.xpi"
 
       - name: Write release notes
-        if: steps.version.outputs.exists != 'true'
+        if: steps.plan.outputs.mode != 'skip'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.plan.outputs.version }}
         run: |
           {
             # The matching "## <version>" section of CHANGELOG.md, if there is one
@@ -99,15 +115,21 @@ jobs:
             echo "## First steps"
             echo
             echo "Word Sponge is fully local by default. Open its settings from the popup, add your own words by typing them or uploading a .txt, .csv, .tsv or .json file, and pick how often words are replaced."
+            echo
           } > release-notes.md
 
       - name: Publish release
-        if: steps.version.outputs.exists != 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          target_commitish: ${{ github.sha }}
-          name: Word Sponge ${{ steps.version.outputs.version }}
-          body_path: release-notes.md
-          generate_release_notes: true
-          files: dist/*
+        if: steps.plan.outputs.mode != 'skip'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          MODE: ${{ steps.plan.outputs.mode }}
+        run: |
+          if [ "$MODE" = create ]; then
+            gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="v$VERSION" -f target_commitish="$GITHUB_SHA" --jq .body >> release-notes.md
+            gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --title "Word Sponge $VERSION" --notes-file release-notes.md
+          else
+            # Keep the part GitHub generated, from "What's Changed" on, and replace the rest
+            gh release view "v$VERSION" --json body --jq .body | awk '/^## What.s Changed/ { found = 1 } found' >> release-notes.md
+            gh release upload "v$VERSION" dist/* --clobber
+            gh release edit "v$VERSION" --notes-file release-notes.md
+          fi
