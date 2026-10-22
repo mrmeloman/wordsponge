@@ -77,7 +77,7 @@ Choose "Custom" in settings to set the three limits yourself; leave a number emp
 
 To publish a release, add a section for the new version to CHANGELOG.md and raise the version in manifest.json. When that reaches the main branch, a GitHub Actions workflow builds a Chrome package and a Firefox package and publishes them as a release. It can also be run by hand from the Actions tab.
 
-The Firefox package is unsigned unless the repository has the secrets `AMO_JWT_ISSUER` and `AMO_JWT_SECRET`, which are API credentials from the [addons.mozilla.org developer hub](https://addons.mozilla.org/developers/addon/api/key/). With them, the workflow has the package signed by Mozilla for self-distribution, so it installs permanently in Firefox and Firefox-based browsers.
+The Firefox package is unsigned unless the repository has the secrets `AMO_JWT_ISSUER` and `AMO_JWT_SECRET`, which are API credentials from the [addons.mozilla.org developer hub](https://addons.mozilla.org/developers/addon/api/key/). With them, the workflow has the package signed by Mozilla for self-distribution, so it installs permanently in Firefox and Firefox-based browsers. If you add them after a release was published, run the workflow by hand from the Actions tab: it rebuilds that release from its tag and adds the signed package.
 
 ## Contributing
 
