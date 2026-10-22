@@ -4,25 +4,66 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Word Sponge - Add Your Words</title>
-  <!--<link rel="stylesheet" href="styles.css"> <-- Link to your CSS file -->
   <style>
+    body { font-family: Arial, sans-serif; max-width: 640px; margin: 20px auto; padding: 0 16px; }
     .p-4 { padding: 40px 0; }
     .p-2 { padding: 20px 0; }
-	.p-1 { padding: 10px 0; }
+    .p-1 { padding: 10px 0; }
+    textarea { width: 100%; box-sizing: border-box; font-family: monospace; }
+    .hint { color: #666; font-size: 0.9em; }
+    fieldset { border: none; padding: 0; margin: 0; }
+    .preset { display: block; padding: 6px 0; }
+    .preset .hint { display: block; margin-left: 24px; }
+    #frequencyLimits input[type=number] { width: 80px; }
+    #frequencyLimits input[type=range] { width: 100%; max-width: 360px; }
   </style>
 </head>
 <body>
 <h1>Add Your Own Words</h1>
+<p class="hint">One word per line as <code>word: translation</code>. Your words are kept alongside any downloaded list and take priority over it.</p>
 <form id="wordListForm">
   <label for="wordList">Word List</label>
   <div>
-    <textarea id="wordList" name="wordList" rows="10" cols="50" required></textarea>
+    <textarea id="wordList" name="wordList" rows="10" cols="50" spellcheck="false"></textarea>
   </div>
-  <button type="button" id="saveButton">Save</button>
+  <div class="p-1">
+    <button type="button" id="saveButton">Save</button>
+  </div>
+  <div class="p-1">
+    <label for="wordFile">Upload a word list (.txt, .csv, .tsv or .json)</label>
+    <div><input type="file" id="wordFile" accept=".txt,.csv,.tsv,.json,text/plain,text/csv,application/json"></div>
+    <p class="hint">Text files: one pair per line, separated by a colon, tab, comma or semicolon. JSON: an object of <code>{"word": "translation"}</code> or an array of <code>["word", "translation"]</code> pairs. Uploaded words are added to the list above.</p>
+  </div>
 </form>
 <div class="results"></div>
 <div class="p-4">
+<h1>How Often Words Are Replaced</h1>
+<p class="hint">Choose how much of each page turns into the language you are learning. Changes apply to open pages right away.</p>
+<fieldset id="presets">
+  <legend class="p-1">Intensity</legend>
+</fieldset>
+<div id="frequencyLimits">
+  <div class="p-1">
+    <label for="density">Share of matching words to replace: <output id="densityValue" for="density"></output></label>
+    <div><input type="range" id="density" min="5" max="100" step="5"></div>
+  </div>
+  <div class="p-1">
+    <label for="perWord">Replace the same word at most</label>
+    <input type="number" id="perWord" min="0" step="1" placeholder="no limit"> times per page
+  </div>
+  <div class="p-1">
+    <label for="perPage">Replace at most</label>
+    <input type="number" id="perPage" min="0" step="1" placeholder="no limit"> words per page
+  </div>
+</div>
+<p class="hint">Leave a number empty for no limit. When limits apply, the replaced words are picked at random across the whole page, so each visit practises different ones.</p>
+</div>
+<div class="p-4">
 <h1>Word List Updates From wordsponge.com</h1>
+  <p class="hint">Off by default: the extension then works fully offline with only your own words. Turning it on asks for permission to access thewordsponge.com and refreshes the list once a day.</p>
+  <div class="p-1">
+    <label><input type="checkbox" id="downloadWords"> Download word lists from thewordsponge.com</label>
+  </div>
   <div class="p-1">
 	<span style=font-size:1.2em>Language: </span>
     <select id="languageSelect" name="languageSelect">
@@ -33,7 +74,6 @@
       <option value="JP">JP</option>
       <option value="GB">GB</option>
       <option value="AU">AU</option>
-	  <option value="Custom">Custom</option>
     </select>
   </div>
   <div class="p-1">
@@ -41,7 +81,7 @@
 	<div class="update_results"></div>
   </div>
 </div>
-<!-- Add any additional elements as needed -->
-<script src="settings.js"></script> <!-- Link to your JS file -->
+<script src="frequency.js"></script>
+<script src="settings.js"></script>
 </body>
 </html>

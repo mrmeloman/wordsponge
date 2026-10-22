@@ -1,0 +1,113 @@
+name: Release
+
+# Publishes a release with a Chrome and a Firefox package when the version in manifest.json
+# changes on main and there is no release for it yet. It can also be started by hand.
+on:
+  push:
+    branches: [main]
+    paths: [manifest.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      # Optional repository secrets: addons.mozilla.org API credentials for a signed Firefox package
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: |
+          version=$(jq -r .version manifest.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "Release v$version already exists, nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build packages
+        if: steps.version.outputs.exists != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p build/chrome build/firefox dist
+          for target in chrome firefox; do
+            git ls-files | grep -vE '^(\.github/|wordsponge\.zip$|README\.md$|CHANGELOG\.md$)' | xargs cp --parents -t "build/$target"
+          done
+          # Each browser gets a manifest without the keys only the other browser uses
+          jq 'del(.browser_specific_settings, .background.scripts)' manifest.json > build/chrome/manifest.json
+          jq 'del(.minimum_chrome_version, .background.service_worker)' manifest.json > build/firefox/manifest.json
+          (cd build/chrome && zip -qrX "../../dist/wordsponge-chrome-$VERSION.zip" .)
+          (cd build/firefox && zip -qrX "../../dist/wordsponge-firefox-$VERSION.zip" .)
+          npx --yes web-ext@10 lint --source-dir build/firefox
+
+      - name: Sign the Firefox package
+        if: steps.version.outputs.exists != 'true' && env.AMO_JWT_ISSUER != ''
+        continue-on-error: true
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          npx --yes web-ext@10 sign --channel unlisted --source-dir build/firefox --artifacts-dir signed \
+            --api-key "$AMO_JWT_ISSUER" --api-secret "$AMO_JWT_SECRET"
+          mv signed/*.xpi "dist/wordsponge-firefox-$VERSION.xpi"
+
+      - name: Write release notes
+        if: steps.version.outputs.exists != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            # The matching "## <version>" section of CHANGELOG.md, if there is one
+            changes=$(awk -v heading="## $VERSION" '$0 == heading { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md 2>/dev/null)
+            if [ -n "$changes" ]; then
+              echo "## What's new"
+              echo "$changes"
+              echo
+            fi
+            echo "## Install"
+            echo
+            echo "### Chrome, Edge, Brave and other Chromium browsers (version 121 or newer)"
+            echo
+            echo "1. Download **wordsponge-chrome-$VERSION.zip** below and unzip it to a folder you will keep."
+            echo "2. Open chrome://extensions and turn on **Developer mode** in the top-right corner."
+            echo "3. Click **Load unpacked** and select the unzipped folder."
+            echo
+            echo "### Firefox, Zen, LibreWolf and other Firefox-based browsers (version 140 or newer)"
+            echo
+            if [ -f "dist/wordsponge-firefox-$VERSION.xpi" ]; then
+              echo "1. Download **wordsponge-firefox-$VERSION.xpi** below."
+              echo "2. Open about:addons, click the gear icon, choose **Install Add-on From File...** and select the file."
+              echo "3. The package is signed by Mozilla, so it stays installed after a restart."
+              echo
+              echo "The .zip is the same build unsigned, for submitting to addons.mozilla.org."
+            else
+              echo "1. Download **wordsponge-firefox-$VERSION.zip** below."
+              echo "2. Open about:debugging#/runtime/this-firefox, click **Load Temporary Add-on...** and select the zip."
+              echo "3. This build is not signed, so the browser removes it on restart; load it again after restarting."
+            fi
+            echo
+            echo "Then open about:addons, select Word Sponge, and on the **Permissions** tab make sure access to all websites is allowed."
+            echo
+            echo "## First steps"
+            echo
+            echo "Word Sponge is fully local by default. Open its settings from the popup, add your own words by typing them or uploading a .txt, .csv, .tsv or .json file, and pick how often words are replaced."
+          } > release-notes.md
+
+      - name: Publish release
+        if: steps.version.outputs.exists != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Word Sponge ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          generate_release_notes: true
+          files: dist/*
