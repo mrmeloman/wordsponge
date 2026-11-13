@@ -94,6 +94,15 @@
       align-items: center;
       padding: 5px 0;
     }
+    .scope {
+      display: block;
+      max-width: 210px;
+      font-size: 11px;
+      color: #777;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .settings {
       padding:20px 0 10px 0;
     }
@@ -110,7 +119,7 @@
 <div class="hint" id="pauseHint"></div>
 <div class="switches">
   <label class="switch-row">
-    <span>On for this page</span>
+    <span>On for this page<span class="scope" id="pageScope"></span></span>
     <span class="toggle-switch">
       <input type="checkbox" id="pageToggle" checked>
       <span class="slider round"></span>

@@ -3,6 +3,9 @@ const api = globalThis.browser ?? globalThis.chrome;
 const results = document.querySelector('.results');
 const updateResults = document.querySelector('.update_results');
 const wordList = document.getElementById('wordList');
+// Text typed into the word list is kept until it is saved, even when the list changes elsewhere
+let wordListDirty = false;
+wordList.addEventListener('input', () => { wordListDirty = true; });
 const downloadWords = document.getElementById('downloadWords');
 const languageSelect = document.getElementById('languageSelect');
 const updateWordsButton = document.getElementById('updateWordsButton');
@@ -56,7 +59,7 @@ function parseJson(text) {
 
 async function saveCustomWords(customWords) {
   await api.storage.local.set({ customWords });
-  wordList.value = formatWords(customWords);
+  if (!wordListDirty) wordList.value = formatWords(customWords);
   return Object.keys(customWords).length;
 }
 
@@ -69,6 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 document.getElementById('saveButton').addEventListener('click', async () => {
   try {
+    wordListDirty = false;
     const count = await saveCustomWords(parseLines(wordList.value));
     results.textContent = `Words saved successfully (${count}).`;
   } catch (error) {
@@ -85,6 +89,7 @@ document.getElementById('wordFile').addEventListener('change', async (event) => 
     const uploaded = file.name.toLowerCase().endsWith('.json') ? parseJson(text) : parseLines(text);
     const added = Object.keys(uploaded).length;
     if (!added) throw new Error('No word pairs found in the file.');
+    wordListDirty = false;
     const count = await saveCustomWords({ ...parseLines(wordList.value), ...uploaded });
     results.textContent = `Added ${added} words from ${file.name} (${count} in total).`;
   } catch (error) {
@@ -189,7 +194,7 @@ const newWord = document.getElementById('newWord');
 const newTranslation = document.getElementById('newTranslation');
 const newLevel = document.getElementById('newLevel');
 const TABLE_LIMIT = 200;
-const state = { customWords: {}, words: {}, wordSettings: {} };
+const state = { customWords: {}, words: {}, wordSettings: {}, downloadedKeys: new Set() };
 
 function levelOptions(select, value = 'normal') {
   for (const [name, level] of Object.entries(WORD_LEVELS)) select.add(new Option(level.label, name));
@@ -250,8 +255,12 @@ function wordRow(word, translation, own) {
     remove = Object.assign(document.createElement('button'), { type: 'button', textContent: 'Remove' });
     remove.addEventListener('click', async () => {
       const { [word]: removed, ...rest } = state.customWords;
+      state.customWords = rest;
       await saveCustomWords(rest);
-      await saveWordSettings({ [key]: null });
+      // A downloaded word with the same spelling keeps its level
+      if (!state.downloadedKeys.has(key)) await saveWordSettings({ [key]: null });
+      wordSearch.focus();
+      renderTable();
     });
   }
   const row = document.createElement('tr');
@@ -280,9 +289,10 @@ async function loadWords() {
   state.customWords = stored.customWords || {};
   state.words = (stored.downloadWords && stored.words) || {};
   state.wordSettings = stored.wordSettings || {};
+  state.downloadedKeys = new Set(Object.keys(stored.words || {}).map(wordKey));
   wordSource.hidden = !Object.keys(state.words).length;
   if (wordSource.hidden) wordSource.value = 'custom';
-  if (document.activeElement !== wordList) wordList.value = formatWords(state.customWords);
+  if (!wordListDirty && document.activeElement !== wordList) wordList.value = formatWords(state.customWords);
   // Leave the table alone while one of its fields is being edited, so focus is not lost
   if (!wordTable.contains(document.activeElement)) renderTable();
 }
@@ -306,7 +316,10 @@ wordSearch.addEventListener('input', renderTable);
 levelFilter.addEventListener('change', renderTable);
 wordSource.addEventListener('change', renderTable);
 document.getElementById('bulkApply').addEventListener('click', () => {
-  saveWordSettings(Object.fromEntries(matchingWords().map(([word]) => [wordKey(word), { level: bulkLevelSelect.value }])));
+  const words = matchingWords();
+  const label = WORD_LEVELS[bulkLevelSelect.value].label;
+  if (words.length > 1 && !window.confirm(`Set ${words.length} words to ${label}?`)) return;
+  saveWordSettings(Object.fromEntries(words.map(([word]) => [wordKey(word), { level: bulkLevelSelect.value }])));
 });
 
 // Where Word Sponge is off: whole sites from the popup's site switch, single pages from its page switch
@@ -332,7 +345,8 @@ async function renderOffList() {
   if (!entries.length) offList.replaceChildren(Object.assign(document.createElement('li'), { className: 'hint', textContent: 'Nowhere: Word Sponge runs on every site.' }));
 }
 
-api.commands.getAll().then((commands) => {
+// Firefox for Android has no keyboard shortcuts
+api.commands?.getAll?.().then((commands) => {
   const shortcut = commands.find(({ name }) => name === 'toggle-pause')?.shortcut;
   document.getElementById('shortcutHint').textContent = shortcut
     ? ` (${shortcut}, which you can change in your browser's extension shortcut settings)`

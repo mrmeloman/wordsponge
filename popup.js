@@ -41,7 +41,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const { hostname } = new URL(tab.url);
   const page = pageKey(tab.url);
   domainNameElement.textContent = hostname;
-  const [command] = (await api.commands.getAll()).filter(({ name }) => name === 'toggle-pause');
+  // "This page" ignores the query string, so show exactly which address the page switch covers
+  const pageScope = document.getElementById('pageScope');
+  pageScope.textContent = pageScope.title = page;
+  // Firefox for Android has no keyboard shortcuts
+  const [command] = ((await api.commands?.getAll?.()) || []).filter(({ name }) => name === 'toggle-pause');
   let current = null;
 
   async function render(status) {

@@ -74,7 +74,11 @@ Every word has a level, which you can set in the settings table or on the card t
 | Familiar | About a quarter of the chance, and at most once per page |
 | Known | Never shown, but kept in your list |
 
-A word can also have its own "max per page", which overrides its level and your intensity settings. Words from the downloaded list can have levels as well.
+With the Everything intensity every word is already shown each time it appears, so Focus and Normal look the same there; Focus makes a difference once limits apply.
+
+A word can also have its own "max per page", which overrides its level and your intensity settings.
+
+"This page" means the address without its query string, so turning Word Sponge off for a YouTube video turns it off for every video page. The popup shows the exact address its page switch covers. Words from the downloaded list can have levels as well.
 
 The keyboard shortcut for pausing can be changed in your browser's extension shortcut settings.
 

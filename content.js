@@ -15,6 +15,8 @@ let wordSettings = {};
 let paused = false;
 let pageOff = false;
 let siteOff = false;
+let disabledPages = {};
+let currentPage = pageKey(window.location.href);
 let ui = null;
 
 function escapeRegExp(text) {
@@ -167,6 +169,7 @@ function startTranslations() {
   if (!matcher) return;
   usage = { total: 0, perWord: new Map() };
   observer = new MutationObserver((mutations) => {
+    if (checkLocation()) return;
     for (const mutation of mutations) {
       if (mutation.type === 'characterData') {
         translateIn(mutation.target);
@@ -236,11 +239,16 @@ function getUI() {
   ui = { host, card, toast, cardFor: null, toastTimer: 0 };
   toast.addEventListener('mouseenter', () => clearTimeout(ui.toastTimer));
   toast.addEventListener('mouseleave', () => { ui.toastTimer = setTimeout(hideToast, 4000); });
+  toast.addEventListener('focusin', () => clearTimeout(ui.toastTimer));
+  toast.addEventListener('focusout', () => { ui.toastTimer = setTimeout(hideToast, 4000); });
   return ui;
 }
 
 function onCardKey(event) {
-  if (event.key === 'Escape') closeCard();
+  if (event.key !== 'Escape') return;
+  const { returnFocus } = ui;
+  closeCard();
+  if (returnFocus?.isConnected) returnFocus.focus?.({ preventScroll: true });
 }
 
 function openCard(span) {
@@ -271,11 +279,13 @@ function openCard(span) {
   );
   card.hidden = false;
   ui.cardFor = span;
+  ui.returnFocus = document.activeElement;
   // Below the word, or above it when there is no room, and always inside the window
   const rect = span.getBoundingClientRect();
   const top = rect.bottom + 6 + card.offsetHeight > window.innerHeight ? rect.top - 6 - card.offsetHeight : rect.bottom + 6;
   card.style.top = `${Math.max(8, top)}px`;
   card.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - card.offsetWidth - 8))}px`;
+  buttons.find((button) => button.getAttribute('aria-pressed') === 'true').focus({ preventScroll: true });
   window.addEventListener('keydown', onCardKey, true);
   window.addEventListener('scroll', closeCard, { capture: true, passive: true });
   window.addEventListener('resize', closeCard);
@@ -293,14 +303,21 @@ function closeCard() {
 // A short notice after pausing, so the change is visible and easy to undo or make permanent
 function showToast(kind) {
   const { toast } = getUI();
+  const turnedBackOn = () => showToast(paused ? 'paused' : 'resumed');
   const notices = {
     paused: ['Word Sponge is paused on this page.', [
       ['Resume', () => setPaused(false, true)],
       ['Always skip this page', async () => { await setPageOff(true); showToast('skipped'); }]
     ]],
     resumed: ['Word Sponge is back on for this page.', []],
-    skipped: ['Word Sponge is now always off on this page.', [
-      ['Undo', async () => { await setPageOff(false); showToast(paused ? 'paused' : 'resumed'); }]
+    skipped: [`Word Sponge is now always off on ${currentPage}.`, [
+      ['Undo', async () => { await setPageOff(false); turnedBackOn(); }]
+    ]],
+    pageOff: [`Word Sponge is off on ${currentPage}.`, [
+      ['Turn back on', async () => { await setPageOff(false); turnedBackOn(); }]
+    ]],
+    siteOff: [`Word Sponge is off for ${window.location.hostname}.`, [
+      ['Turn back on', async () => { await api.storage.sync.remove(window.location.hostname); turnedBackOn(); }]
     ]]
   };
   const [message, actions] = notices[kind];
@@ -330,7 +347,9 @@ async function refresh() {
     api.storage.local.get(['words', 'customWords', 'downloadWords', 'frequency', 'wordSettings', 'disabledPages'])
   ]);
   siteOff = Boolean(disabled[hostname]);
-  pageOff = Boolean(stored.disabledPages?.[pageKey(window.location.href)]);
+  currentPage = pageKey(window.location.href);
+  disabledPages = stored.disabledPages || {};
+  pageOff = Boolean(disabledPages[currentPage]);
   wordSettings = stored.wordSettings || {};
   if (siteOff || pageOff || paused) {
     stopTranslations();
@@ -339,6 +358,16 @@ async function refresh() {
   matcher = buildMatcher({ ...(stored.downloadWords ? stored.words : null), ...stored.customWords });
   limits = normalizeFrequency(stored.frequency);
   startTranslations();
+}
+
+// Single-page sites change the address without reloading; "this page" follows the address
+function checkLocation() {
+  const page = pageKey(window.location.href);
+  if (page === currentPage) return false;
+  currentPage = page;
+  if (Boolean(disabledPages[page]) === pageOff) return false;
+  refresh();
+  return true;
 }
 
 function status() {
@@ -380,20 +409,32 @@ api.storage.onChanged.addListener((changes, area) => {
     // Words just marked Known disappear at once; other level changes apply from the next visit, so the page does not reshuffle
     wordSettings = changes.wordSettings.newValue || {};
     undoTranslation([...document.querySelectorAll('.translated-word')].filter((span) => wordSettings[wordKey(span.dataset.original)]?.level === 'known'));
+    // Merging the restored text must not give the neighbouring words another chance
+    observer?.takeRecords();
   }
-  const pageChanged = 'disabledPages' in changes && Boolean(changes.disabledPages.newValue?.[pageKey(window.location.href)]) !== pageOff;
+  if ('disabledPages' in changes) disabledPages = changes.disabledPages.newValue || {};
+  const pageChanged = 'disabledPages' in changes && Boolean(disabledPages[pageKey(window.location.href)]) !== pageOff;
   if (pageChanged || ['words', 'customWords', 'downloadWords', 'frequency'].some((key) => key in changes)) refresh();
 });
 
 // The popup and the keyboard shortcut (through the background) control pausing on this page
-api.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'status') {
-    sendResponse(status());
-  } else if (message.action === 'setPaused' || message.action === 'togglePause') {
-    setPaused(message.action === 'togglePause' ? !paused : message.paused, message.notify).then(sendResponse);
-    return true;
+async function handleMessage(message) {
+  if (pageKey(window.location.href) !== currentPage) await refresh();
+  if (message.action === 'status') return status();
+  if (siteOff || pageOff) {
+    if (message.notify) showToast(siteOff ? 'siteOff' : 'pageOff');
+    return status();
   }
+  return setPaused(message.action === 'togglePause' ? !paused : message.paused, message.notify);
+}
+
+api.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!['status', 'setPaused', 'togglePause'].includes(message.action)) return;
+  handleMessage(message).then(sendResponse);
+  return true;
 });
+window.addEventListener('popstate', checkLocation);
+window.navigation?.addEventListener('navigatesuccess', checkLocation);
 refresh();
 
 // On thewordsponge.com the site's own "update words" button refreshes the downloaded list

@@ -57,6 +57,7 @@ async function togglePauseInActiveTab() {
   if (tab) await api.tabs.sendMessage(tab.id, { action: 'togglePause', notify: true }).catch(() => {});
 }
 
-api.commands.onCommand.addListener((command) => {
+// Firefox for Android has no keyboard shortcuts
+api.commands?.onCommand.addListener((command) => {
   if (command === 'toggle-pause') togglePauseInActiveTab();
 });
