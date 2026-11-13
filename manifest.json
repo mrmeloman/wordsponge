@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Word Sponge",
-  "version": "1.3",
+  "version": "1.4",
   "description": "Word Sponge helps you learn a new language by integrating that language into your daily life.",
   "minimum_chrome_version": "121",
   "permissions": [
@@ -33,6 +33,12 @@
   "background": {
     "service_worker": "background.js",
     "scripts": ["background.js"]
+  },
+  "commands": {
+    "toggle-pause": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Pause or resume Word Sponge on the current page"
+    }
   },
   "content_scripts": [
     {
