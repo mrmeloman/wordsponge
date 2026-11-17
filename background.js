@@ -50,3 +50,14 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+// The keyboard shortcut pauses or resumes Word Sponge on the current page, with a notice on the page
+async function togglePauseInActiveTab() {
+  const [tab] = await api.tabs.query({ active: true, currentWindow: true });
+  if (tab) await api.tabs.sendMessage(tab.id, { action: 'togglePause', notify: true }).catch(() => {});
+}
+
+// Firefox for Android has no keyboard shortcuts
+api.commands?.onCommand.addListener((command) => {
+  if (command === 'toggle-pause') togglePauseInActiveTab();
+});

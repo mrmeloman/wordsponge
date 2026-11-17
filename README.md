@@ -9,6 +9,8 @@ Word Sponge is a Chrome and Firefox extension that helps you learn a new languag
 - Replace words on any web page with their translations
 - Click on translated words to switch back to the original word
 - Control how often words are replaced: Light, Balanced, Intense or Everything, or your own limits
+- Set how often each word appears: Focus, Normal, Familiar or Known, plus an optional limit per word
+- Pause on the current page with one click or Alt+Shift+P, or turn Word Sponge off for a page or a whole site
 - Add your own words by hand or upload a word list file (.txt, .csv, .tsv or .json)
 - Works fully offline with your own words by default; downloading word lists from thewordsponge.com is an opt-in that refreshes once a day
 - Only replaces words in regular text, not in attributes such as classes or data tags
@@ -49,8 +51,9 @@ That's it! You're now ready to start browsing the web and learning a new languag
 
 - Navigate to any web page in your browser.
 - Any words on the page that match the words list for your chosen language will be replaced with their translations.
-- Click on a translated word to switch back to the original word.
-- Use the toggle in the extension popup to turn Word Sponge off for the current site.
+- Click on a translated word to see the original. A small card opens where you can set how often that word appears.
+- To stop for now, press **Pause on this page** in the extension popup or on the word card, or press Alt+Shift+P. The words come back when you reload or return to the page.
+- To stop for good, use the popup's switches for this page or this whole site. Settings lists every page and site where Word Sponge is off.
 
 ## Your Own Words
 
@@ -59,6 +62,25 @@ Open the extension's settings (the "Settings" link in the popup, or the add-on's
 - Type words directly into the text box, one per line, as `word: translation`, and click "Save".
 - Or upload a file. Text files (.txt, .csv, .tsv) take one pair per line separated by a colon, tab, comma or semicolon; lines starting with `#` are ignored. JSON files take either an object such as `{"cat": "gato"}` or an array of `["cat", "gato"]` pairs. Uploaded words are added to the list in the text box.
 - To use the ready-made lists from thewordsponge.com instead, tick "Download word lists from thewordsponge.com" in settings. The browser then asks for permission to access that site; untick it to go back to local-only mode.
+
+## How Often Each Word Appears
+
+Every word has a level, which you can set in the settings table or on the card that opens when you click a translated word:
+
+| Level | What it does |
+|---|---|
+| Focus | For new or important words: three times the chance and the limit per page, and picked first when a page limit applies |
+| Normal | Follows your intensity settings |
+| Familiar | About a quarter of the chance, and at most once per page |
+| Known | Never shown, but kept in your list |
+
+With the Everything intensity every word is already shown each time it appears, so Focus and Normal look the same there; Focus makes a difference once limits apply.
+
+A word can also have its own "max per page", which overrides its level and your intensity settings.
+
+"This page" means the address without its query string, so turning Word Sponge off for a YouTube video turns it off for every video page. The popup shows the exact address its page switch covers. Words from the downloaded list can have levels as well.
+
+The keyboard shortcut for pausing can be changed in your browser's extension shortcut settings.
 
 ## How Often Words Are Replaced
 
